@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Olyph AI User</title>
+
+  <!-- Chat + Survey styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style_chat_survey.css') }}" />
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-window">
+      <div class="chat-header">
+        <div>Olyph AI User</div>
+        <button id="homeBtn">Home</button>
+      </div>
+
+      <div id="chat-body" class="chat-body" aria-live="polite"></div>
+
+      <div class="button-container">
+        <button id="askBtn" class="chat-btn">Ask me anything</button>
+        <button id="surveyBtn" class="chat-btn">Survey Agent</button>
+        <!-- Report button intentionally removed from Chat+Survey build -->
+      </div>
+
+      <div class="chat-input">
+        <input id="userInput" placeholder="Type a message..." />
+        <button id="sendBtn">Send</button>
+        <button id="micBtn" title="Speak">🎤</button>
+      </div>
+
+      <div id="voicePreview" style="display:none;">
+        <audio id="audioPlayback" controls></audio>
+        <button id="sendVoiceBtn">📤 Send Voice</button>
+        <button id="discardVoiceBtn">❌ Discard</button>
+      </div>
+      
+      <div id="recordingBar" style="display:none;">
+        🎙 Recording… <span id="recordingTime">0</span>s
+        <button id="stopRecordingBtn">Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat + Survey JS -->
+  <script src="{{ url_for('static', filename='script_chat_survey.js') }}"></script>
+</body>
+</html>

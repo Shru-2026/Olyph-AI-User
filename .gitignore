@@ -1,0 +1,23 @@
+# Environment files
+.env
+
+# Google Credentials
+creds/
+*.json
+
+# Python environment
+venv/
+env/
+.venv/
+
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# auth file with hashed passwords
+auth/authorized_users.json

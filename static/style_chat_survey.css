@@ -1,0 +1,199 @@
+/* ===== CHAT + SURVEY STYLES ===== */
+:root{
+  --bg: #d7def0;
+  --panel: #002b5c;
+  --accent: #4793ff;
+  --accent-dark: #005bb5;
+  --card-bg: #ffffff;
+  --muted: #b9c9e3;
+  --text-dark: #002b5c;
+}
+
+/* ===== GENERAL PAGE STYLING ===== */
+html,body{
+  height:100%;
+  margin:0;
+  padding:0;
+  background-color: var(--bg);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ===== CHAT WINDOW CONTAINER ===== */
+.chat-container{
+  width:100%;
+  max-width:420px;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+.chat-window{
+  width:100%;
+  height:640px;
+  background-color: var(--panel);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 6px 28px rgba(0,0,0,0.18);
+  display:flex;
+  flex-direction:column;
+}
+
+/* ===== HEADER ===== */
+.chat-header{
+  background: linear-gradient(90deg, var(--accent), #256fdc);
+  color:#000;
+  font-weight:700;
+  font-size:20px;
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:2px solid rgba(0,0,0,0.08);
+}
+
+#homeBtn{
+  background-color: var(--accent);
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  padding:6px 12px;
+  cursor:pointer;
+  font-weight:600;
+  display:none;
+}
+#homeBtn:hover{ background-color: var(--accent-dark); }
+
+/* ===== CHAT BODY ===== */
+.chat-body{
+  flex:1;
+  padding:14px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  background: linear-gradient(135deg, var(--bg), var(--muted));
+}
+
+/* Custom scrollbar */
+.chat-body::-webkit-scrollbar{ width:7px; }
+.chat-body::-webkit-scrollbar-thumb{ background:var(--accent); border-radius:4px; }
+
+/* ===== MESSAGES ===== */
+.bot-message, .user-message{
+  padding:10px 14px;
+  border-radius:12px;
+  max-width:85%;
+  word-wrap:break-word;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+
+.bot-message{
+  background-color: var(--accent);
+  color:#000;
+  align-self:flex-start;
+}
+
+.user-message{
+  background-color: var(--card-bg);
+  color:var(--text-dark);
+  align-self:flex-end;
+  border:1px solid #e6eefc;
+}
+
+/* quick buttons container (survey followup) */
+.quick-btns{
+  display:flex;
+  gap:8px;
+  align-self:flex-start;
+  margin-top:6px;
+}
+
+.quick-btn{
+  background:#fff;
+  border:1px solid #e6eefc;
+  padding:8px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+}
+.quick-btn:hover{ background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* ===== BUTTON CONTAINER ===== */
+.button-container{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  margin:12px 0;
+}
+
+.chat-btn{
+  background-color: #ffffff;
+  color: var(--panel);
+  font-weight:600;
+  border:none;
+  width:85%;
+  padding:12px 0;
+  border-radius:10px;
+  cursor:pointer;
+  box-shadow:0 3px 10px rgba(0,0,0,0.12);
+}
+.chat-btn:hover{
+  background-color: var(--accent);
+  color:#fff;
+  box-shadow:0 6px 18px rgba(0,0,0,0.16);
+}
+
+/* ===== INPUT AREA ===== */
+.chat-input{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px;
+  background-color:#003b7a;
+  border-top:2px solid rgba(255,255,255,0.04);
+  border-bottom-left-radius:18px;
+  border-bottom-right-radius:18px;
+}
+
+.chat-input input{
+  flex:1;
+  border:none;
+  outline:none;
+  padding:10px 12px;
+  border-radius:8px;
+  font-size:14px;
+  width:100%;
+  background:#f4f7fb;
+}
+
+.chat-input button{
+  background-color: var(--accent);
+  color:#fff;
+  border:none;
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:16px;
+}
+.chat-input button:hover{ background-color: var(--accent-dark); }
+
+/* link style inside messages */
+.chat-link{ color:#0b5cff; text-decoration:underline; font-weight:500; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width:480px){
+  .chat-window{ height:82vh; border-radius:12px; }
+  .chat-header{ font-size:18px; padding:12px; }
+  .chat-btn{ width:92%; }
+}
+
+#micBtn {
+  border: none;
+  background: #f1f1f1;
+  border-radius: 50%;
+  padding: 8px 12px;
+  cursor: pointer;
+}
