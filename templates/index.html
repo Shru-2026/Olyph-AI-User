@@ -27,19 +27,15 @@
       <div class="chat-input">
         <input id="userInput" placeholder="Type a message..." />
         <button id="sendBtn">Send</button>
-        <button id="micBtn" title="Speak">🎤</button>
+        <button id="micBtn">🎤</button>
       </div>
 
-      <div id="voicePreview" style="display:none;">
-        <audio id="audioPlayback" controls></audio>
-        <button id="sendVoiceBtn">📤 Send Voice</button>
-        <button id="discardVoiceBtn">❌ Discard</button>
-      </div>
-      
       <div id="recordingBar" style="display:none;">
         🎙 Recording… <span id="recordingTime">0</span>s
         <button id="stopRecordingBtn">Stop</button>
       </div>
+
+      <audio id="audioPlayback" controls style="display:none;"></audio>
     </div>
   </div>
 

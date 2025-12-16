@@ -1,8 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ Chat + Survey + Voice recording loaded");
+  console.log("✅ Chat + Survey + Live Speech-to-Text loaded");
 
   // -------------------------
-  // DOM refs
+  // DOM refs (SAFE)
   // -------------------------
   const chatBody = document.getElementById("chat-body");
   const buttonContainer = document.querySelector(".button-container");
@@ -25,31 +25,44 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedMode = null;
 
   // -------------------------
+  // Speech recognition
+  // -------------------------
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+  let liveRecognizer = null;
+  let liveTranscript = "";
+  let isRecording = false;
+
+  // -------------------------
   // Utils
   // -------------------------
   function addMessage(text, sender = "bot") {
+    if (!chatBody) return;
     const div = document.createElement("div");
     div.className = sender === "bot" ? "bot-message" : "user-message";
-    div.innerHTML = text.replace(/\n/g, "<br>");
+    div.innerHTML = String(text).replace(/\n/g, "<br>");
     chatBody.appendChild(div);
     chatBody.scrollTop = chatBody.scrollHeight;
   }
 
   function resetChat() {
-    chatBody.innerHTML = "";
+    if (chatBody) chatBody.innerHTML = "";
     addMessage("👋 Hey! I'm OlyphAI. How can I help you today?");
-    buttonContainer.style.display = "flex";
-    homeButton.style.display = "none";
+    if (buttonContainer) buttonContainer.style.display = "flex";
+    if (homeButton) homeButton.style.display = "none";
     selectedMode = null;
+    userInput && (userInput.value = "");
   }
 
   function handleSelection(mode) {
     selectedMode = mode;
-    buttonContainer.style.display = "none";
-    homeButton.style.display = "inline-block";
+    if (buttonContainer) buttonContainer.style.display = "none";
+    if (homeButton) homeButton.style.display = "inline-block";
 
     if (mode === "ask") {
       addMessage("💬 You can now ask questions or use voice.");
+      userInput && userInput.focus();
     } else {
       addMessage("📝 Opening survey form...");
       window.open("https://forms.gle/u4pRVf1bAWSbWJA7A", "_blank");
@@ -57,214 +70,160 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // -------------------------
-  // Text chat
+  // Text chat (UNCHANGED FLOW)
   // -------------------------
   async function sendChat() {
+    if (!userInput || selectedMode !== "ask") return;
+
     const msg = userInput.value.trim();
-    if (!msg || selectedMode !== "ask") return;
+    if (!msg) return;
 
     userInput.value = "";
     addMessage(msg, "user");
 
-    const res = await fetch("/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: msg })
-    });
-
-    const data = await res.json();
-    addMessage(data.reply || "⚠️ No reply");
+    try {
+      const res = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      addMessage(data.reply || "⚠️ No reply");
+    } catch (err) {
+      console.error(err);
+      addMessage("⚠️ Server error");
+    }
   }
 
   // -------------------------
-  // 🎤 Voice recording (PCM)
+  // 🎤 Live Speech-to-Text (UI ONLY)
   // -------------------------
-  let audioContext;
-  let processor;
-  let input;
-  let micStream;
-  let pcmChunks = [];
-  let wavChunks = [];
-  let timer;
-  let seconds = 0;
+  function startRecording() {
+    if (isRecording) return;
 
-  async function startRecording() {
     if (selectedMode !== "ask") {
       addMessage("⚠️ Voice works only in chat mode.");
       return;
     }
 
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioContext = new AudioContext({ sampleRate: 16000 });
-
-    input = audioContext.createMediaStreamSource(micStream);
-    processor = audioContext.createScriptProcessor(4096, 1, 1);
-
-    pcmChunks = [];
-    wavChunks = [];
-    seconds = 0;
-
-    recordingBar.style.display = "block";
-    voicePreview.style.display = "none";
-
-    timer = setInterval(() => {
-      seconds++;
-      recordingTime.innerText = seconds;
-    }, 1000);
-
-    processor.onaudioprocess = (e) => {
-      const data = e.inputBuffer.getChannelData(0);
-      const pcm16 = new Int16Array(data.length);
-
-      for (let i = 0; i < data.length; i++) {
-        pcm16[i] = Math.max(-1, Math.min(1, data[i])) * 0x7fff;
-      }
-
-      pcmChunks.push(new Uint8Array(pcm16.buffer));
-      wavChunks.push(pcm16);
-    };
-
-    input.connect(processor);
-    processor.connect(audioContext.destination);
-  }
-
-  function stopRecording() {
-    clearInterval(timer);
-    recordingBar.style.display = "none";
-
-    processor.disconnect();
-    input.disconnect();
-    micStream.getTracks().forEach(t => t.stop());
-
-    const wavBlob = createWavBlob(wavChunks, 16000);
-    audioPlayback.src = URL.createObjectURL(wavBlob);
-    voicePreview.style.display = "block";
-  }
-
-  function discardRecording() {
-    voicePreview.style.display = "none";
-    pcmChunks = [];
-    wavChunks = [];
-  }
-
-  // -------------------------
-  // ✅ SAFE Base64 Encoder (FIX)
-  // -------------------------
-  function uint8ToBase64(u8Arr) {
-    let CHUNK_SIZE = 0x8000; // 32KB
-    let index = 0;
-    let result = '';
-    let slice;
-
-    while (index < u8Arr.length) {
-      slice = u8Arr.subarray(index, index + CHUNK_SIZE);
-      result += String.fromCharCode.apply(null, slice);
-      index += CHUNK_SIZE;
-    }
-    return btoa(result);
-  }
-
-  // -------------------------
-  // Send voice (FIXED)
-  // -------------------------
-  async function sendVoice() {
-    if (!pcmChunks.length) {
-      addMessage("⚠️ No audio recorded.");
+    if (!SpeechRecognition) {
+      addMessage("⚠️ Speech recognition not supported in this browser.");
       return;
     }
 
-    addMessage("🎧 Processing voice…");
+    liveRecognizer = new SpeechRecognition();
+    liveRecognizer.continuous = true;
+    liveRecognizer.interimResults = true;
+    liveRecognizer.lang = "en-IN";
 
-    const total = pcmChunks.reduce((a, b) => a + b.length, 0);
-    const merged = new Uint8Array(total);
-    let offset = 0;
+    liveTranscript = "";
+    isRecording = true;
 
-    pcmChunks.forEach(chunk => {
-      merged.set(chunk, offset);
-      offset += chunk.length;
-    });
+    if (recordingBar) recordingBar.style.display = "block";
+    if (voicePreview) voicePreview.style.display = "none";
+    if (recordingTime) recordingTime.innerText = "0";
 
-    const base64Audio = uint8ToBase64(merged);
+    let seconds = 0;
+    const timer = setInterval(() => {
+      if (!isRecording) return clearInterval(timer);
+      seconds++;
+      if (recordingTime) recordingTime.innerText = seconds;
+    }, 1000);
 
-    console.log("📤 Sending audio", {
-      bytes: merged.length,
-      base64: base64Audio.length
-    });
+    liveRecognizer.onresult = (event) => {
+      let interim = "";
+      let finalText = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const txt = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += txt + " ";
+        } else {
+          interim += txt;
+        }
+      }
+
+      liveTranscript += finalText;
+      if (userInput) {
+        userInput.value = (liveTranscript + interim).trim();
+      }
+    };
+
+    liveRecognizer.onerror = (e) => {
+      console.error("Speech error:", e);
+      stopRecording();
+    };
+
+    liveRecognizer.start();
+  }
+
+  function stopRecording() {
+    if (!isRecording) return;
+    isRecording = false;
+
+    if (liveRecognizer) {
+      liveRecognizer.stop();
+      liveRecognizer = null;
+    }
+
+    if (recordingBar) recordingBar.style.display = "none";
+
+    // Freeze final text
+    if (userInput && liveTranscript) {
+      userInput.value = liveTranscript.trim();
+    }
+
+    if (voicePreview) voicePreview.style.display = "block";
+  }
+
+  function discardRecording() {
+    liveTranscript = "";
+    if (userInput) userInput.value = "";
+    if (voicePreview) voicePreview.style.display = "none";
+  }
+
+  // -------------------------
+  // Send voice → EXISTING /ask
+  // -------------------------
+  async function sendVoice() {
+    if (!userInput) return;
+
+    const finalText = userInput.value.trim();
+    if (!finalText) {
+      addMessage("⚠️ No speech detected.");
+      return;
+    }
+
+    addMessage(finalText, "user");
 
     try {
-      const res = await fetch("/speech-chat", {
+      const res = await fetch("/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          audio: base64Audio,
-          sampleRate: 16000
-        })
+        body: JSON.stringify({ message: finalText })
       });
-
       const data = await res.json();
-      console.log("📥 Backend response:", data);
-
-      if (data.transcript) addMessage(data.transcript, "user");
       addMessage(data.reply || "⚠️ No reply");
-
     } catch (err) {
-      console.error("❌ sendVoice error:", err);
-      addMessage("⚠️ Failed to send voice.");
+      console.error(err);
+      addMessage("⚠️ Server error");
     }
 
     discardRecording();
   }
 
   // -------------------------
-  // WAV helper (preview only)
+  // Bind events (NULL SAFE)
   // -------------------------
-  function createWavBlob(chunks, sampleRate) {
-    const bufferLength = chunks.reduce((a, b) => a + b.length, 0);
-    const buffer = new ArrayBuffer(44 + bufferLength * 2);
-    const view = new DataView(buffer);
+  if (sendBtn) sendBtn.onclick = sendChat;
+  if (micBtn) micBtn.onclick = startRecording;
+  if (stopRecordingBtn) stopRecordingBtn.onclick = stopRecording;
+  if (sendVoiceBtn) sendVoiceBtn.onclick = sendVoice;
+  if (discardVoiceBtn) discardVoiceBtn.onclick = discardRecording;
 
-    let offset = 0;
-    function writeString(s) {
-      for (let i = 0; i < s.length; i++) {
-        view.setUint8(offset++, s.charCodeAt(i));
-      }
-    }
-
-    writeString("RIFF");
-    view.setUint32(offset, 36 + bufferLength * 2, true); offset += 4;
-    writeString("WAVEfmt ");
-    view.setUint32(offset, 16, true); offset += 4;
-    view.setUint16(offset, 1, true); offset += 2;
-    view.setUint16(offset, 1, true); offset += 2;
-    view.setUint32(offset, sampleRate, true); offset += 4;
-    view.setUint32(offset, sampleRate * 2, true); offset += 4;
-    view.setUint16(offset, 2, true); offset += 2;
-    view.setUint16(offset, 16, true); offset += 2;
-    writeString("data");
-    view.setUint32(offset, bufferLength * 2, true); offset += 4;
-
-    chunks.forEach(chunk => {
-      chunk.forEach(sample => {
-        view.setInt16(offset, sample, true);
-        offset += 2;
-      });
-    });
-
-    return new Blob([view], { type: "audio/wav" });
-  }
-
-  // -------------------------
-  // Bind events
-  // -------------------------
-  sendBtn.onclick = sendChat;
-  micBtn.onclick = startRecording;
-  stopRecordingBtn.onclick = stopRecording;
-  sendVoiceBtn.onclick = sendVoice;
-  discardVoiceBtn.onclick = discardRecording;
-
-  askBtn.onclick = () => handleSelection("ask");
-  surveyBtn.onclick = () => handleSelection("survey");
-  homeButton.onclick = resetChat;
+  if (askBtn) askBtn.onclick = () => handleSelection("ask");
+  if (surveyBtn) surveyBtn.onclick = () => handleSelection("survey");
+  if (homeButton) homeButton.onclick = resetChat;
 
   resetChat();
 });
