@@ -3,12 +3,36 @@ import os
 import azure.cognitiveservices.speech as speechsdk
 from dotenv import load_dotenv
 
-load_dotenv()
+# ----------------------------------
+# Load .env from Render Secret Files
+# ----------------------------------
+ENV_PATH = "/etc/secrets/.env"
+
+if os.path.exists(ENV_PATH):
+    load_dotenv(ENV_PATH)
+else:
+    # Local development fallback
+    load_dotenv()
+
 
 def transcribe_pcm(pcm_bytes: bytes, sample_rate=16000) -> str:
+    """
+    Transcribes raw PCM audio bytes using Azure Speech-to-Text.
+    Works both locally and on Render.
+    """
+
+    speech_key = os.getenv("AZURE_SPEECH_KEY")
+    speech_region = os.getenv("AZURE_SPEECH_REGION")
+
+    if not speech_key or not speech_region:
+        raise RuntimeError(
+            "Azure Speech credentials not found. "
+            "Check .env in Render Secret Files or local environment."
+        )
+
     speech_config = speechsdk.SpeechConfig(
-        subscription=os.getenv("AZURE_SPEECH_KEY"),
-        region=os.getenv("AZURE_SPEECH_REGION")
+        subscription=speech_key,
+        region=speech_region
     )
     speech_config.speech_recognition_language = "en-IN"
 
@@ -26,7 +50,6 @@ def transcribe_pcm(pcm_bytes: bytes, sample_rate=16000) -> str:
         audio_config=audio_config
     )
 
-    # Push raw PCM bytes
     push_stream.write(pcm_bytes)
     push_stream.close()
 

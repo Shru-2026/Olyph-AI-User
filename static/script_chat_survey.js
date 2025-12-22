@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const discardVoiceBtn = document.getElementById("discardVoiceBtn");
 
   let selectedMode = null;
+  let form = "https://forms.gle/u4pRVf1bAWSbWJA7A";
 
   // -------------------------
   // Speech recognition
@@ -65,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
       userInput && userInput.focus();
     } else {
       addMessage("📝 Opening survey form...");
-      window.open("https://forms.gle/u4pRVf1bAWSbWJA7A", "_blank");
+      window.open(form, "_blank");
     }
   }
 
