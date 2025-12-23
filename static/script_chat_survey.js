@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ Chat + Survey + Live Speech-to-Text loaded");
 
   // -------------------------
-  // DOM refs (SAFE)
+  // DOM refs
   // -------------------------
   const chatBody = document.getElementById("chat-body");
   const buttonContainer = document.querySelector(".button-container");
@@ -18,12 +18,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const stopRecordingBtn = document.getElementById("stopRecordingBtn");
 
   const voicePreview = document.getElementById("voicePreview");
-  const audioPlayback = document.getElementById("audioPlayback");
   const sendVoiceBtn = document.getElementById("sendVoiceBtn");
   const discardVoiceBtn = document.getElementById("discardVoiceBtn");
 
   let selectedMode = null;
-  let form = "https://forms.gle/u4pRVf1bAWSbWJA7A";
+  const form = "https://forms.gle/u4pRVf1bAWSbWJA7A";
 
   // -------------------------
   // Speech recognition
@@ -31,9 +30,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition || null;
 
-  let liveRecognizer = null;
-  let liveTranscript = "";
+  let recognizer = null;
   let isRecording = false;
+  let speechSessionId = 0;   // 🔥 CRITICAL FIX
 
   // -------------------------
   // Utils
@@ -47,23 +46,48 @@ document.addEventListener("DOMContentLoaded", () => {
     chatBody.scrollTop = chatBody.scrollHeight;
   }
 
+  function clearInputHard() {
+    if (userInput) {
+      userInput.value = "";
+      userInput.blur();
+      userInput.focus();
+    }
+  }
+
+  function resetSpeechState() {
+    speechSessionId++;   // 🔥 invalidate old events
+    isRecording = false;
+
+    if (recognizer) {
+      try { recognizer.abort(); } catch {}
+      try { recognizer.stop(); } catch {}
+      recognizer = null;
+    }
+
+    if (recordingBar) recordingBar.style.display = "none";
+    if (voicePreview) voicePreview.style.display = "none";
+
+    clearInputHard();
+  }
+
   function resetChat() {
     if (chatBody) chatBody.innerHTML = "";
+    resetSpeechState();
     addMessage("👋 Hey! I'm OlyphAI. How can I help you today?");
     if (buttonContainer) buttonContainer.style.display = "flex";
     if (homeButton) homeButton.style.display = "none";
     selectedMode = null;
-    userInput && (userInput.value = "");
   }
 
   function handleSelection(mode) {
+    resetSpeechState();
     selectedMode = mode;
+
     if (buttonContainer) buttonContainer.style.display = "none";
     if (homeButton) homeButton.style.display = "inline-block";
 
     if (mode === "ask") {
       addMessage("💬 You can now ask questions or use voice.");
-      userInput && userInput.focus();
     } else {
       addMessage("📝 Opening survey form...");
       window.open(form, "_blank");
@@ -71,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // -------------------------
-  // Text chat (UNCHANGED FLOW)
+  // Text chat
   // -------------------------
   async function sendChat() {
     if (!userInput || selectedMode !== "ask") return;
@@ -79,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const msg = userInput.value.trim();
     if (!msg) return;
 
-    userInput.value = "";
+    resetSpeechState();
     addMessage(msg, "user");
 
     try {
@@ -90,14 +114,13 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       const data = await res.json();
       addMessage(data.reply || "⚠️ No reply");
-    } catch (err) {
-      console.error(err);
+    } catch {
       addMessage("⚠️ Server error");
     }
   }
 
   // -------------------------
-  // 🎤 Live Speech-to-Text (UI ONLY)
+  // 🎤 Live Speech-to-Text (FIXED)
   // -------------------------
   function startRecording() {
     if (isRecording) return;
@@ -108,84 +131,61 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (!SpeechRecognition) {
-      addMessage("⚠️ Speech recognition not supported in this browser.");
+      addMessage("⚠️ Speech recognition not supported.");
       return;
     }
 
-    liveRecognizer = new SpeechRecognition();
-    liveRecognizer.continuous = true;
-    liveRecognizer.interimResults = true;
-    liveRecognizer.lang = "en-IN";
-
-    liveTranscript = "";
+    resetSpeechState();     // 🔥 HARD RESET
     isRecording = true;
 
+    const currentSession = speechSessionId;
+
+    recognizer = new SpeechRecognition();
+    recognizer.continuous = true;
+    recognizer.interimResults = true;
+    recognizer.lang = "en-IN";
+
     if (recordingBar) recordingBar.style.display = "block";
-    if (voicePreview) voicePreview.style.display = "none";
     if (recordingTime) recordingTime.innerText = "0";
 
     let seconds = 0;
     const timer = setInterval(() => {
-      if (!isRecording) return clearInterval(timer);
+      if (!isRecording || currentSession !== speechSessionId) {
+        clearInterval(timer);
+        return;
+      }
       seconds++;
       if (recordingTime) recordingTime.innerText = seconds;
     }, 1000);
 
-    liveRecognizer.onresult = (event) => {
-      let interim = "";
-      let finalText = "";
+    recognizer.onresult = (event) => {
+      if (!isRecording || currentSession !== speechSessionId) return;
 
+      let text = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const txt = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalText += txt + " ";
-        } else {
-          interim += txt;
-        }
+        text += event.results[i][0].transcript;
       }
-
-      liveTranscript += finalText;
-      if (userInput) {
-        userInput.value = (liveTranscript + interim).trim();
-      }
+      if (userInput) userInput.value = text.trim();
     };
 
-    liveRecognizer.onerror = (e) => {
-      console.error("Speech error:", e);
-      stopRecording();
-    };
+    recognizer.onerror = () => resetSpeechState();
+    recognizer.onend = () => {};
 
-    liveRecognizer.start();
+    recognizer.start();
   }
 
   function stopRecording() {
     if (!isRecording) return;
     isRecording = false;
 
-    if (liveRecognizer) {
-      liveRecognizer.stop();
-      liveRecognizer = null;
+    if (recognizer) {
+      try { recognizer.stop(); } catch {}
     }
 
     if (recordingBar) recordingBar.style.display = "none";
-
-    // Freeze final text
-    if (userInput && liveTranscript) {
-      userInput.value = liveTranscript.trim();
-    }
-
     if (voicePreview) voicePreview.style.display = "block";
   }
 
-  function discardRecording() {
-    liveTranscript = "";
-    if (userInput) userInput.value = "";
-    if (voicePreview) voicePreview.style.display = "none";
-  }
-
-  // -------------------------
-  // Send voice → EXISTING /ask
-  // -------------------------
   async function sendVoice() {
     if (!userInput) return;
 
@@ -195,6 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    resetSpeechState();
     addMessage(finalText, "user");
 
     try {
@@ -205,22 +206,19 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       const data = await res.json();
       addMessage(data.reply || "⚠️ No reply");
-    } catch (err) {
-      console.error(err);
+    } catch {
       addMessage("⚠️ Server error");
     }
-
-    discardRecording();
   }
 
   // -------------------------
-  // Bind events (NULL SAFE)
+  // Bind events
   // -------------------------
   if (sendBtn) sendBtn.onclick = sendChat;
   if (micBtn) micBtn.onclick = startRecording;
   if (stopRecordingBtn) stopRecordingBtn.onclick = stopRecording;
   if (sendVoiceBtn) sendVoiceBtn.onclick = sendVoice;
-  if (discardVoiceBtn) discardVoiceBtn.onclick = discardRecording;
+  if (discardVoiceBtn) discardVoiceBtn.onclick = resetSpeechState;
 
   if (askBtn) askBtn.onclick = () => handleSelection("ask");
   if (surveyBtn) surveyBtn.onclick = () => handleSelection("survey");
