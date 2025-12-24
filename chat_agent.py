@@ -46,7 +46,7 @@ nltk.download("stopwords", quiet=True)
 FAQ_FROM_SHEET_ID = os.getenv("CHAT_FAQ_SHEET_ID", "").strip()
 FAQ_FROM_SHEET_NAME = os.getenv("CHAT_FAQ_SHEET_NAME", "FAQ").strip()
 FAQ_PDF_PATH = os.getenv("CHAT_FAQ_PDF_PATH", "Olyphaunt FAQs.pdf")
-threshold = float(os.getenv("CHAT_FAQ_SIM_THRESHOLD", 0.6))
+threshold = float(os.getenv("CHAT_FAQ_SIM_THRESHOLD", 0.8))
 
 DEBUG = os.getenv("CHAT_DEBUG", "") not in ("", "0", "false", "False")
 
