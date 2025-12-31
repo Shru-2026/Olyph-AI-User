@@ -1,0 +1,14 @@
+Step by step instructions to run this locally on your device.
+1. Download Anoconda - https://www.anaconda.com/download/success
+2. Open the Anoconda prompt
+3. Install git in anaconda: cmd - "conda install git"
+4. Navigate to where you want to clone the folder: cmd - "cd /d "D:\Olyphaunt Solutions"
+5. Clone the Repository: cmd - "git clone https://github.com/Shru-2026/Olyph-AI-User.git"
+   (This will create a new folder for the cloned repository) 
+6. Create a environment in anaconda 
+    [i] Command to Create: cmd - "conda create --name my_env python=3.10"
+    [ii] Activate the Environment: cmd - "conda activate my_env"
+7. Install all the dependencies: cmd - "pip install -r requirements.txt"
+8. Run the application: cmd - "run app.py"
+9. To stop the application from running: press ctrl+cd
+10. If you want to deactivate the enbironemnet: cmd - "conda deactivate my_env"
