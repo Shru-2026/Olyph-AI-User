@@ -10,5 +10,5 @@ Step by step instructions to run this locally on your device.
     [ii] Activate the Environment: cmd - "conda activate my_env"
 7. Install all the dependencies: cmd - "pip install -r requirements.txt"
 8. Run the application: cmd - "run app.py"
-9. To stop the application from running: press ctrl+cd
+9. To stop the application from running: press ctrl+c
 10. If you want to deactivate the enbironemnet: cmd - "conda deactivate my_env"
